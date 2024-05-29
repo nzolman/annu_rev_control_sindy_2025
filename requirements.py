@@ -1,0 +1,11 @@
+jax[cpu]
+numpy
+scipy
+scikit-learn
+pandas
+matplotlib
+seaborn
+pysr
+pydmd
+pysindy
+kneed
