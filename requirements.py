@@ -2,6 +2,8 @@ jax==0.4.28
 jaxlib==0.4.28
 jaxopt==0.8.3
 jaxtyping==0.2.28
+optax==0.1.9
+equinox==0.11.4
 gpjax==0.8.2
 numpy==1.26.4
 scipy==1.13.0
