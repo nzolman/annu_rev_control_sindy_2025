@@ -2,6 +2,21 @@ import pysindy as ps
 import numpy as np
 
 def fit_dmd(train_data, sigma = 1e-2, dt = 0.1, t=np.arange(0,20,0.1)):
+    '''
+    Simple function for vanilla DMD fitting. Discrete-time SINDy reduces to 
+    DMD when there is zero threshold and a linear library.
+    
+    Arguments:
+    
+    - train_data: (ndarray)
+        training data
+    - sigma: (float)
+        L2 coefficient
+    - dt: (float)
+        time delta between steps
+    - t: (ndarray)
+        array of time values (placeholder)
+    '''
     sigma = max(sigma, 1e-6)
     
     # zero threshold reduces down to normal L2-Regularized regression
@@ -16,4 +31,3 @@ def fit_dmd(train_data, sigma = 1e-2, dt = 0.1, t=np.arange(0,20,0.1)):
     model.fit(train, t=dt, multiple_trajectories=True, quiet=True)
     
     return model
-

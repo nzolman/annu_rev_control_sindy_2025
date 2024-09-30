@@ -1,5 +1,8 @@
-import numpy as np
+# NOTE: Significant portions of this code were taken or inspired from The Official Equinox Documentation
+# https://docs.kidger.site/equinox/examples/mnist/
 
+import numpy as np
+from copy import deepcopy
 import jax
 from jax import jit, random
 import jax.numpy as jnp
@@ -11,6 +14,7 @@ import equinox as eqx
 from jaxtyping import Array, Float, Int, PyTree  # https://github.com/google/jaxtyping
 
 def get_all_params(layers):
+    '''helper function for grabbing weights and biases'''
     weights = jnp.concatenate([layer.weight.flatten() for layer in layers])
     biases = jnp.concatenate([layer.bias.flatten() for layer in layers])
     
@@ -18,17 +22,20 @@ def get_all_params(layers):
 
 @jit
 def l2_reg(layers):
+    '''Vanilla L2 on all parameters'''
     params = get_all_params(layers)
     return jnp.sum(params**2)
 
 @eqx.filter_jit
 def mse_loss(model,x,y):
+    '''MSE loss'''
     pred = x + jax.vmap(model)(x)
     mse = jnp.mean((pred - y)**2)
     return mse
 
 @eqx.filter_jit
 def loss(model, x, y, alpha = 1e-4):
+    '''full loss'''
     mse = mse_loss(model, x, y)
     reg = l2_reg(model.layers)
     
@@ -40,7 +47,10 @@ def epoch_idxes(n_tot, n_batches):
     return batch_idxes
 
 def prep_data(train_data, val_split = 0.25):
+    '''Split training and testing validation by the number of _trajectories_.'''
     N_traj = len(train_data)
+    
+    # always have at least one validation trajectory
     n_traj_val = max(1, int(val_split* N_traj))
 
     X_train = train_data[:-n_traj_val, :-1]
@@ -61,9 +71,26 @@ def train_nn(train_data, n_epochs=5000, n_batch=10,
              use_plateau = False,
              plateau_kwargs = dict(patience=20, cooldown=10, 
                                    factor=0.5,rtol=1e-4, 
-                                #    accumulation_size=200
                                    )
              ):
+    '''
+    Train the neural network
+    
+    Arugments:
+        - train_data: (ndarray)
+            Training Data
+        - n_epochs: (int)
+            Number of epochs
+        - n_batch: (int)
+            Batches used for SGD
+        - seed (int)
+            Random seed used for initializing numpy and jax.random
+        - use_plateu (bool)
+            Whether to use reduce on plateau
+        - plateau_kwargs (dict):
+            kwargs passed for reduce_on_plateau
+
+    '''
     X_train_flat, Y_train_flat, X_val_flat, Y_val_flat = prep_data(train_data)
     n_dim = X_train_flat.shape[-1]
     
@@ -83,15 +110,13 @@ def train_nn(train_data, n_epochs=5000, n_batch=10,
         optim = optax.adam(lr)
     # init
     opt_state = optim.init(eqx.filter(model, eqx.is_array))
-    
-
         
     @eqx.filter_jit
     def make_step(
         model: eqx.nn.MLP,
         opt_state: PyTree,
         x: Float[Array, "batch n"],
-        y: Int[Array, " batch n"],
+        y: Int[Array, "batch n"],
         alpha = 1e-4,
     ):
         '''Single Gradient step'''
@@ -100,11 +125,9 @@ def train_nn(train_data, n_epochs=5000, n_batch=10,
         model = eqx.apply_updates(model, updates)
         return model, opt_state, loss_value
 
-    @eqx.filter_jit # this may not be possible to jit
+    @eqx.filter_jit 
     def train_epoch(model, opt_state, X_train, Y_train, splits, alpha=1e-4):
         '''Train through epoch'''
-        # n_tot = len(X_train)
-        # splits = epoch_idxes
         tot_loss = 0.0
         for idx in splits:
             x = X_train[idx]
@@ -115,6 +138,10 @@ def train_nn(train_data, n_epochs=5000, n_batch=10,
     
     losses = []
     val_losses = []
+    
+    best_val_loss = jnp.inf
+    best_model = None
+    best_idx = 0
     # TO-DO: Early stopping of validation loss
     for epoch in range(n_epochs):
         # get batch indices
@@ -125,9 +152,17 @@ def train_nn(train_data, n_epochs=5000, n_batch=10,
                                                  X_train_flat, Y_train_flat, 
                                                  splits, alpha=l2_reg
                                                  )
+        
         # compute validation loss
         val_loss = mse_loss(model, X_val_flat, Y_val_flat)
+        
+        # keep track of best validation model
+        if val_loss < best_val_loss:
+            best_model = deepcopy(model)
+            best_val_loss = val_loss
+            best_idx = epoch
+
         val_losses.append(val_loss)
         losses.append(tot_loss)
     
-    return model, losses, val_losses
+    return (model, losses, val_losses), (best_model, best_val_loss, best_idx)

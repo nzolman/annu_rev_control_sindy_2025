@@ -1,4 +1,5 @@
 import numpy as np
+import sympy
 from pysr import PySRRegressor
 from pysindy.differentiation import FiniteDifference
 from sklearn.model_selection import LeaveOneOut
@@ -7,8 +8,25 @@ from scipy.integrate import solve_ivp
 
 from sparse_rev import _tmp_dir
 
-def simple_pysr_fit(train_data, parsimony = 0.0032, t=np.arange(0,20,0.1), n_iter = 10, verbosity=0,
-                    tmp_dir = _tmp_dir):
+def simple_pysr_fit(train_data, parsimony = 0.0032, t=np.arange(0,20,0.1), 
+                    n_iter = 10, verbosity=0, tmp_dir = _tmp_dir):
+    '''
+    Fit PySR model
+    
+    Arguments:
+        - train_data (ndarray)
+            training data
+        - parsimony (float)
+            pysr parsimony parameter, encourages simplicity in equations
+        - t (ndarray)
+            time mesh (used for approximating dx/dt)
+        - n_iter (int)
+            number of iterations to use
+        - verbosity (int)
+            pysr verbosity level
+        - tmp_dir (str)
+            Temporary directory
+    '''
     fd_method = FiniteDifference(axis=-2)
     
     X_dot = fd_method(train_data, t)
@@ -22,17 +40,38 @@ def simple_pysr_fit(train_data, parsimony = 0.0032, t=np.arange(0,20,0.1), n_ite
         temp_equation_file=True,
         parsimony=parsimony, 
         warm_start=False,
-        verbosity=verbosity
+        verbosity=verbosity,
+        random_state=42,    # https://github.com/MilesCranmer/PySR/discussions/386#discussioncomment-6493277
+        deterministic=True,
+        procs=0,
+        multithreading=False,
     )
+
     X = train_data
     model.fit(np.concatenate(X), 
-                np.concatenate(X_dot))
+              np.concatenate(X_dot))
     return model
 
 def cv_pysr_parsimony(train_data, parsimony = 0.0032, t=np.arange(0,20,0.1), n_iter = 10, verbosity=0,
                       tmp_dir = _tmp_dir):
     
-    '''assume train data has at least 2 trajs. We'll do leave one out cv'''
+    '''
+    Cross-validation to select the parsimony parameter.
+    
+    Note: assume train data has at least 2 trajs. We'll do leave one out cv
+    
+    Arguments:
+        - train_data (ndarray)
+            training data
+        - parsimony (float)
+            pysr parsimony parameter, encourages simplicity in equations
+        - t (ndarray)
+            time mesh (used for approximating dx/dt)
+        - n_iter (int)
+            number of iterations to use
+        - tmp_dir (str)
+            Temporary directory
+    '''
     fd_method = FiniteDifference(axis=-2)
     
     X_dot = fd_method(train_data, t)
@@ -85,7 +124,9 @@ def cv_pysr_parsimony(train_data, parsimony = 0.0032, t=np.arange(0,20,0.1), n_i
 
 def pareto_pysr(train_data, dt =0.1, t = np.arange(0,1,10), p_space = np.logspace(-5,1,10), 
                 tmp_dir = _tmp_dir):
-    
+    '''
+    Do a pareto sweep using cross validation and refit the model
+    '''
     # use cross-validation at each of the prospective parsimony parameters
     res = np.array([cv_pysr_parsimony(train_data, parsimony = p, t=t, n_iter = 10, verbosity=0) for p in p_space])
     
@@ -100,6 +141,10 @@ def pareto_pysr(train_data, dt =0.1, t = np.arange(0,1,10), p_space = np.logspac
     return model
 
 def predict_next_steps_pysr(model, x0s, dt, n=1):
+    '''
+    Predict the next step for each x0 in a list of x0s.
+    '''
+
     def dyn_fn(t,x):
         '''wrapper for model'''
         dx = model.predict(x.reshape(-1,x.shape[-1]))
@@ -112,3 +157,6 @@ def predict_next_steps_pysr(model, x0s, dt, n=1):
             ]
     
     return np.array(sols)
+
+def print_sr(model):
+    return sympy.simplify(sympy.Matrix(model.sympy()))

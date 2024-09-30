@@ -1,6 +1,5 @@
 import pysindy as ps
 import numpy as np
-
 from sklearn.model_selection import  LeaveOneOut, ShuffleSplit
 from kneed import KneeLocator 
 
@@ -127,20 +126,23 @@ def pareto_sindy(train_data, sigma=1e-2, dt =0.1,
                                   use_weak = use_weak, use_ensemble=use_ensemble, weak_kwargs=weak_kwargs)
                     for thresh in threshold_list])
     
-    # find the pareto-optimal solution between accuracy and sparsity
+    # find the pareto-optimal solutions between accuracy and sparsity
+    # choose best point using elbow (or "knee" criterion)
     mses, l0s = res.mean(axis=1).T
-    kneedle = KneeLocator( l0s,mses, S=1.0, curve="convex", direction='decreasing', online=True)
+    pareto_idx = paretoset_efficient(np.array([l0s, mses]).T)
     
-    if kneedle.elbow is None:
-        elbow_idxes = np.array([[np.argmin(mses)]])
-    else:
-        elbow_idxes = np.where(l0s == kneedle.elbow)[0] 
-    best_mse_idx = np.argmin(mses[elbow_idxes])
+    kneedle = KneeLocator( l0s[pareto_idx],mses[pareto_idx], S=1.0, curve="convex", direction='decreasing', online=True)
 
+    if kneedle.elbow is None:
+        elbow_idxes = np.array([[np.argmin(mses[pareto_idx])]])
+    else:
+        elbow_idxes = np.where(l0s[pareto_idx] == kneedle.elbow)[0]
+
+    best_mse_idx = np.argmin(mses[pareto_idx][elbow_idxes])
     best_elbow_idx = elbow_idxes[best_mse_idx]
-    
-    thresh = threshold_list[best_elbow_idx]
-    
+
+    thresh = threshold_list[pareto_idx][best_elbow_idx]
+        
     # fit the model with the new value
     # NOTE: if use_weak==True, this fits a dummy model, we'll replace the coefficients with the real ones.
     model = fit_SINDy_model(train_data, alpha = sigma, threshold = thresh, dt = dt, t_data=t, 
