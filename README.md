@@ -18,6 +18,11 @@ and then run the following in the root directory:
 pip install -e .
 ```
 
+# Running the Benchmarks
+All scripts for producing Figure 4 in the paper can be found under `sparse_rev/scripts`. The sweeps are fairly time intensive and written to be single-threaded, so they may take a few hours to run to completion. However, they should be trivially parallelized by sweeping combinations of `(model_name, seed)` across independent workers. 
+
+**NOTE**: During your first usage, you might notice julia being downloaded due to using the pysr package
+
 # Methods
 
 ## SINDy
@@ -30,8 +35,6 @@ For DMD, we again use the PySINDy package. Discrete-time SINDy reduces to vanill
 
 ## Weak Ensemble SINDy
 For Weak Ensemble SINDy, we once again use the PySINDy package. We consider a continuous time model with a cubic library for estimating the dynamics and use scipy's RK45 integrator to perform the next-state predictions. For the Weak-SINDy implementation, we define the number of test functions and their width to depend on the length of the trajectory. For E-SINDy, we use 20 models with library ensembling and bagging, and utilize the median coefficients during inference. Just like with SINDy, we use cross-validation to select the threshold parameter. The $L^2$ coefficient is fixed to be $10^{-3}$ because the features are built out of inner products between the test functions and basis functions and the noise scale does not translate the same.
-
-
 
 ## Neural Networks
 We utilize the [Equinox library](https://github.com/patrick-kidger/equinox) [4] for building our neural networks on top of [JAX](https://github.com/jax-ml/jax) [5]. To simplify the problem, we fit the neural net (NN) based off the regression $x_{n+1} = x_n + NN(x_n)$, i.e. we purely learn the discrete time update. Because of the simplicity of the problem, we restrict to a basic MLP network with 2 hidden layers of size 16 each and tanh activations. We use a learning rate of $10^{-4}$ and use a validation set to choose the best model during 10,000 epochs of training to avoid overfitting. 
