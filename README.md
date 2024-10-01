@@ -15,13 +15,16 @@ git clone https://github.com/nzolman/annu_rev_control_2024.git
 and then run the following in the root directory: 
 
 ```bash
+pip install -r requirements.txt
 pip install -e .
 ```
 
 # Running the Benchmarks
 All scripts for producing Figure 4 in the paper can be found under `sparse_rev/scripts`. The sweeps are fairly time intensive and written to be single-threaded, so they may take a few hours to run to completion. However, they should be trivially parallelized by sweeping combinations of `(model_name, seed)` across independent workers. 
 
-**NOTE**: During your first usage, you might notice julia being downloaded due to using the pysr package
+An example of the output from these sweeps can be found under the `data/` directory in CSV format.
+
+**NOTE**: During your first usage, you might notice julia being downloaded due to using the pysr package.
 
 # Methods
 
