@@ -17,7 +17,9 @@ N_warmup = int(T_warmup // dt)
 
 def prep_lorenz_data(sigma = 1e-2, 
                      signal_scales=np.array([8.16,  8.40, 26.94]), 
-                     n_traj = 16, train_seed=0, T_max = T_max
+                     n_traj = 16, 
+                     train_seed=0, 
+                     T_max = T_max
                      ):
     '''
     Prepare the data for training/testing using a Lorenz dataset.
