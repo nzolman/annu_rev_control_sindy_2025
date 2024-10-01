@@ -15,10 +15,24 @@ T_warmup = 1.0
 N_warmup = int(T_warmup // dt) 
 
 
-def prep_lorenz_data(sigma = 1e-2, signal_scales=np.array([8.16,  8.40, 26.94]), 
-                     n_traj = 16, train_seed=0, T_max = T_max):
+def prep_lorenz_data(sigma = 1e-2, 
+                     signal_scales=np.array([8.16,  8.40, 26.94]), 
+                     n_traj = 16, train_seed=0, T_max = T_max
+                     ):
     '''
-    Prepare the data for training/testing.
+    Prepare the data for training/testing using a Lorenz dataset.
+    
+    Arguments:
+        sigma (float)
+            noise fraction to add to each scaled dimension
+        signal_scales (list [x_scale, y_scale, z_scale])
+            the x,y, and z scales for the data. Default values precomputed based on absoluate value of data from the attractor.
+        n_traj (int)
+            number of trajectories
+        train_seed (int)
+            seed for generating training data.
+        T_max (float)
+            time duration of the trajectory
     '''
     t = np.arange(0, T_warmup + T_max, dt)
     
@@ -48,9 +62,25 @@ def prep_lorenz_data(sigma = 1e-2, signal_scales=np.array([8.16,  8.40, 26.94]),
     return key, data, {'clean': test_data}
 
 
-def get_rel_errors_trajs(model_name, n_traj_list, sigma = 1e-2,signal_scales=np.array([8.16,  8.40, 26.94]),  seed = 0):
+def get_rel_errors_trajs(model_name, 
+                         n_traj_list, 
+                         sigma = 1e-2,
+                         signal_scales=np.array([8.16,  8.40, 26.94]),  seed = 0
+                         ):
     '''
     Sweep through the n_traj_list to get the relative errors for a particular model class.
+    
+    Arguments:
+        model_name (str)
+            type of model to use (e.g. "sindy", "gp", "nn", etc.)
+        n_traj_list (list)
+            list of n_traj values to sweep over
+        sigma (float)
+            noise fraction
+        signal_scales (list[x_scale, y_scale, z_scale])
+            the x,y, and z scales for the data. Default values precomputed based on absoluate value of data from the attractor.
+        seed (int)
+            seed for generating training data.
     '''
     t = np.arange(0,T_max+T_warmup, dt)[N_warmup:]
     
@@ -80,9 +110,25 @@ def get_rel_errors_trajs(model_name, n_traj_list, sigma = 1e-2,signal_scales=np.
     return rel_errors, models
 
 
-def get_rel_errors_noise(model_name, sigma_list, signal_scales=np.array([8.16,  8.40, 26.94]), n_traj = 16, seed = 0):
+def get_rel_errors_noise(model_name, 
+                         sigma_list, 
+                         signal_scales=np.array([8.16,  8.40, 26.94]), n_traj = 16, 
+                         seed = 0
+                         ):
     '''
     Sweep through the sigma list to get the relative errors for a particular model class
+    
+    Arguments:
+        model_name (str)
+            type of model to use (e.g. "sindy", "gp", "nn", etc.)
+        sigma_list (list)
+            list of noise fractions to sweep over
+        n_traj (int)
+            number of trajectories
+        signal_scales (list[x_scale, y_scale, z_scale])
+            the x,y, and z scales for the data. Default values precomputed based on absoluate value of data from the attractor.
+        seed (int)
+            seed for generating training data.
     '''
     
     t = np.arange(0,T_max+T_warmup, dt)[N_warmup:]
@@ -111,9 +157,28 @@ def get_rel_errors_noise(model_name, sigma_list, signal_scales=np.array([8.16,  
     return rel_errors, models
 
 
-def get_rel_errors_t_max(model_name, T_max_list,sigma = 1.0,signal_scales=np.array([8.16,  8.40, 26.94]), n_traj = 16, seed = 0):
+def get_rel_errors_t_max(model_name, 
+                         T_max_list,
+                         sigma = 1.0,
+                         n_traj = 16, 
+                         signal_scales=np.array([8.16,  8.40, 26.94]), 
+                         seed = 0):
     '''
     Sweep through the T_max_list to get the relative errors for a particular model class
+    
+    Arguments:
+        model_name (str)
+            type of model to use (e.g. "sindy", "gp", "nn", etc.)
+        T_max_list (list)
+            list of T_max values to sweep over
+        sigma (float)
+            noise fraction
+        n_traj (int)
+            number of trajectories
+        signal_scales (list[x_scale, y_scale, z_scale])
+            the x,y, and z scales for the data. Default values precomputed based on absoluate value of data from the attractor.
+        seed (int)
+            seed for generating training data.
     '''
     rel_errors = []
     models = []

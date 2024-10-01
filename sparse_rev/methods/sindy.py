@@ -4,12 +4,41 @@ from sklearn.model_selection import  LeaveOneOut, ShuffleSplit
 from kneed import KneeLocator 
 
 
-def fit_SINDy_model(train_data, alpha = 1e-2, threshold = 1e-1, dt = 0.01, cubic = True,
+def fit_SINDy_model(train_data, 
+                    alpha = 1e-2, threshold = 1e-1,
+                    dt = 0.01, 
+                    cubic = True,
                     t_data=np.arange(0,0.1, 1e-2),
                     use_ensemble=False,
                     use_weak=True, t_grid=None, weak_kwargs = {},):
     '''
     Wrapper for fitting SINDy, E-SINDy, Weak SINDy, and Weak E-SINDy models
+    
+    Arguments:
+        train_data (ndarray)
+            training data of shape (n_traj, n_time, n_state)
+        alpha (float)
+            L2 regularization coefficient for STRidge
+        threshold (float)
+            coefficient threshold for promoting sparsity in STRidge
+        dt (float)
+            time delta between points
+        cubic (bool)
+            whether to use a cubic library (True) or quadratic (False)
+        t_data (1d array)
+            timestamps
+        use_ensemble (bool)
+            whether to use E-SINDy
+        use_weak (bool)
+            whether to use Weak SINDy (can be combined with E-SINDy)
+        t_grid (ndarray)
+            temporal grid used for Weak SINDy. Default is to just use
+            `t_data
+        weak_kwargs (dict)
+            keyword arguments to be passed into WeakPDELibrary
+        
+    Returns:
+        trained PySINDy model.
     '''
     
     # best practice for Weak libraries require is to explicitly define library functions
@@ -60,9 +89,44 @@ def fit_SINDy_model(train_data, alpha = 1e-2, threshold = 1e-1, dt = 0.01, cubic
     return model
     
 
-def cv_stlq_sindy(train_data, alpha = 1e-2, threshold = 1e-1, dt = 0.1, t=np.arange(0,20,0.1), 
-                  n_splits=10, seed=0, use_weak=True, use_ensemble=False, weak_kwargs={}):
-    '''assume train data has at least 2 trajs.'''
+def cv_stlq_sindy(train_data, 
+                  alpha = 1e-2, threshold = 1e-1, 
+                  dt = 0.1, t=np.arange(0,20,0.1), 
+                  n_splits=10, seed=0, 
+                  use_weak=True, use_ensemble=False, 
+                  weak_kwargs={}
+                  ):
+    '''
+    Cross-validation sweep over a threshold.
+    Note: Assumes `train_data` has at least 2 trajs.
+    
+        Wrapper for fitting SINDy, E-SINDy, Weak SINDy, and Weak E-SINDy models
+    
+    Arguments:
+        train_data (ndarray)
+            training data of shape (n_traj, n_time, n_state)
+        alpha (float)
+            L2 regularization coefficient for STRidge
+        threshold (float)
+            coefficient threshold for promoting sparsity in STRidge
+        dt (float)
+            time delta between points
+        t (1d array)
+            timestamps
+        n_splits (int or str)
+            number of validation splits. If str, must be 'loo' for 
+            leave-one-out cross validation. 
+        seed (int)
+            random seed used for splitting
+        use_ensemble (bool)
+            whether to use E-SINDy
+        use_weak (bool)
+            whether to use Weak SINDy (can be combined with E-SINDy)
+        weak_kwargs (dict)
+            keyword arguments to be passed into WeakPDELibrary
+    Returns: 
+        array of mses and L0 norms for the fitted models 
+    '''
     alpha = max(alpha, 1e-6)
     n_dim = train_data.shape[-1]
 
@@ -78,10 +142,6 @@ def cv_stlq_sindy(train_data, alpha = 1e-2, threshold = 1e-1, dt = 0.1, t=np.ara
     l0_losses = []
     for train_idx, val_idx in splits:
         # define model with given optimizer kwargs
-        
-        
-        # model = ps.SINDy(feature_library=lib, optimizer=optimizer, t_default=dt)
-        # model.fit(list(train_data[train_idx]), t=dt, multiple_trajectories=True, quiet=True)
 
         model = fit_SINDy_model(train_data[train_idx], 
                                 alpha = alpha, 
@@ -114,11 +174,36 @@ def cv_stlq_sindy(train_data, alpha = 1e-2, threshold = 1e-1, dt = 0.1, t=np.ara
     return np.array([mse_losses, l0_losses]).T
 
 
-def pareto_sindy(train_data, sigma=1e-2, dt =0.1, 
-                 t = np.arange(0,1,10), threshold_list = np.logspace(-5,0,10), 
-                 use_weak = True, weak_kwargs = {},
-                 use_ensemble=False
+def pareto_sindy(train_data, sigma=1e-2, 
+                 dt =0.1, t = np.arange(0,1,10), 
+                 threshold_list = np.logspace(-5,0,10), 
+                 use_weak = True,
+                 use_ensemble=False,
+                 weak_kwargs = {}
                  ):
+    '''
+    Pareto front model selection obtained through mean CV loss and sparsity by sweeping over threshold list.
+    
+    Arguments:
+        train_data (ndarray)
+            training data of shape (n_traj, n_time, n_state)
+        sigma (float)
+            noise scale (chosen for L2 regularization coefficient for STRidge)
+        dt (float)
+            time delta between points
+        t (1d array)
+            timestamps
+        threshold_list (list)
+            list of coefficient thresholds to sweep over for promoting sparsity in STRidge
+        use_ensemble (bool)
+            whether to use E-SINDy
+        use_weak (bool)
+            whether to use Weak SINDy (can be combined with E-SINDy)
+        weak_kwargs (dict)
+            keyword arguments to be passed into WeakPDELibrary
+    Returns:
+        fitted PySINDy model after selecting the pareto best model.
+    '''
     sigma = max(sigma, 1e-6)
     
     # perform cross validation on each of the prospective thresholds
@@ -210,11 +295,6 @@ def paretoset_efficient(costs, distinct=True):
 
 def sim_wrapper(model, x0,t, n=1):
     '''safe method for integrating forward'''
-    # try: 
-    #     xs = model.simulate(x0, t)[-n]
-    # except ValueError as e:
-    #     warnings.warn(f'Encountered integration error {e}.')
-        
     integrator_kws={"method": "RK45"}
     xs = model.simulate(x0, t, integrator_kws=integrator_kws)[-n]
     return xs
