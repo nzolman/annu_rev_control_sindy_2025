@@ -35,7 +35,7 @@ if __name__ == '__main__':
             save_path = os.path.join(_SAVE_DIR, f'{model_name}_{seed}.csv')
             model_df.to_csv(save_path, index=False)
             
-        all_models.append(model_df)
+            all_models.append(model_df)
 
     # export everything to a single csv
     save_path = os.path.join(_SAVE_DIR, f'all_noise.csv')
