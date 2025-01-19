@@ -1,5 +1,5 @@
 # Description
-Accompanying code for "Machine Learning for Sparse Nonlinear Modeling and Control" by Brunton et al. in Annual Review of Control, Robotics, and Autonomous Systems. 
+Accompanying code for ["Machine Learning for Sparse Nonlinear Modeling and Control" by Brunton et al.](https://www.annualreviews.org/content/journals/10.1146/annurev-control-030123-015238) in Annual Review of Control, Robotics, and Autonomous Systems. 
 
 **NOTE**: The intent for this code was to create a heuristic baseline comparison between dynamics regression methods. For each method, a choice was made for the implementation to try and provide a high-level illustration of the approaches. We recognize that there are modern variations of these methods that can provide substantial improvements; we encourage the community to try out their own methods on a wide variety of problems. 
 
@@ -9,7 +9,7 @@ There is no plan to continue to maintain this code after publication; however, p
 To install the package, you must clone the repository
 
 ```
-git clone https://github.com/nzolman/annu_rev_control_2024.git
+git clone https://github.com/nzolman/annu_rev_control_sindy_2025.git
 ```
 
 and then run the following in the root directory: 
